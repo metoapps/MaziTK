@@ -37,7 +37,7 @@ body::before{content:''; position:fixed; inset:0; pointer-events:none; z-index:0
 header{padding:34px 0 10px}
 .hbar{display:flex; justify-content:space-between; align-items:flex-end; gap:16px; flex-wrap:wrap}
 .brand{display:flex; align-items:center; gap:11px}
-.brand svg{width:29px;height:29px;flex:none}
+.brand svg{width:32px;height:32px;flex:none}
 .brand b{font-family:'Archivo',sans-serif; font-variation-settings:'wdth' 112,'wght' 700; font-size:16px}
 .brand span{color:var(--mute2); font-size:12px}
 .privbtn{display:inline-flex; align-items:center; gap:7px; background:transparent;
@@ -173,6 +173,9 @@ input[type=search]{flex:1; min-width:200px; background:var(--panel); border:1px 
 input[type=search]::placeholder{color:var(--mute2)}
 input[type=search]:focus{outline:2px solid var(--ice); outline-offset:1px}
 .tblwrap{border:1px solid var(--line); border-radius:var(--r); overflow:hidden; background:var(--panel)}
+.morerow td{padding:14px 12px; background:var(--panel)}
+.morerow .showmore,.morerow .showless{margin:0}
+.morerow:hover{background:var(--panel)!important}
 table{width:100%; border-collapse:collapse; font-size:14px}
 th{font-family:'IBM Plex Mono',monospace; font-size:10.5px; letter-spacing:.12em;
   text-transform:uppercase; color:var(--mute2); text-align:right; padding:11px 12px;
@@ -329,7 +332,7 @@ hr.rule{border:0; border-top:1px solid var(--line); margin:14px 0}
 <header>
   <div class="hbar">
     <div class="brand">
-      <svg viewBox="0 0 28 28" fill="none" aria-hidden="true"><path d="M3 19.5c4.2.6 7.6-.6 10.2-3.6l3.1-3.6c1-1.2 2.2-1.9 3.6-2.1l4.6-.7-3.4 3.9c-.7.8-1 1.7-1 2.7l.1 3.1" stroke="#F5B845" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M13.2 15.9c-1.6-1-2.4-2.5-2.4-4.4 0-2.6 1.9-4.6 4.4-4.6 1.6 0 2.9.7 3.7 1.9" stroke="#F5B845" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="18.6" cy="7.4" r="1" fill="#F5B845"/></svg>
+      <svg viewBox="0 0 64 64" fill="none" aria-hidden="true"><circle cx="32" cy="32" r="30" fill="#F5B845"/><g transform="translate(32 33) scale(.84) translate(-32 -32.5)"><path d="M30 40L25.5 16 39 36z" fill="#0E1430"/><path d="M18 42c6.5-3.2 15.5-3.6 22-1.6-6.5 3.2-15.5 4-22 1.6z" fill="#0E1430"/><path d="M39.4 39.6l9.6-6.8" stroke="#0E1430" stroke-width="2.8" stroke-linecap="round"/><path d="M48 34.4L57.5 28.6l-5.6 7z" fill="#0E1430"/><path d="M18.6 42.4L7 48M20 43.4L10.6 49" stroke="#0E1430" stroke-width="2.1" stroke-linecap="round"/></g></svg>
       <div><b>TK MAZİ</b> <span id="hsub"></span></div>
     </div>
     <div style="display:flex;align-items:center;gap:12px">
@@ -512,8 +515,9 @@ hr.rule{border:0; border-top:1px solid var(--line); margin:14px 0}
   Sayfa arama motorlarına kapalı (noindex) ve veri hiçbir sunucuya gitmez, ama bu linki
   paylaşmanı engellemez. Ekran görüntüsü alıp göndereceksen üstteki
   <b>Sunum modu</b> düğmesi adı ve tescilleri gizler.<br>
-  <b>Marka:</b> Türk Hava Yolları'nın resmi uygulaması değildir. Turna işareti tanınırlık için
-  çizilmiştir, ticari marka dosyası değildir.<br>
+  <b>Marka:</b> Türk Hava Yolları'nın resmi uygulaması değildir, THY ile bağlantısı yoktur.
+  Buradaki turna rozeti bu defter için özgün olarak çizilmiştir; THY'nin tescilli markası
+  kullanılmamıştır.<br>
   <hr class="rule">
   <span id="fnote"></span>
 </footer>
@@ -758,6 +762,14 @@ function comps(S, K) {
     { big: Math.round(stayH / 24) + ' gün', i: false,
       cap: `Yatılarda geçen süre — otel odaları ve o şehirlerin sokakları: ${nf(Math.round(stayH))} saat.`,
       sub: `Havada geçirdiğin sürenin ${n1(stayH / K.hrs)} katı. İşin görünmeyen yarısı burası.` },
+    { big: 'Hiçbiri', i: false,
+      cap: `Gezegenlerin hiçbirine yetmez. En yakın komşumuz Venüs, en yakın konumundayken
+        38,2 milyon km uzakta — uçtuğun mesafe bunun %${n1(K.km / 38.2e6 * 100)} kadarı.`,
+      sub: `Mars'ın %${n1(K.km / 54.6e6 * 100)} kadarı. Ay tek istisna: oraya
+        ${n1(K.km / 384400)} kez gidebilir, ${n1(K.km / 768800)} kez gidip dönebilirdin.` },
+    { big: n1(K.km / 299792.458) + ' saniye', i: true,
+      cap: `Işık aynı mesafeyi bu sürede alır. Senin ${nf(Math.round(K.hrs))} saatlik uçuş ömrün, ışık için yedi saniye.`,
+      sub: `Ortalama yer hızın ${nf(Math.round(K.km / K.hrs))} km/saat — kalkıştan inişe, bekleme dahil.` },
     { big: nf(Math.round(shift)) + ' saat', i: true,
       cap: `Vücut saatinin toplam kayması. Her bacakta kalkış ve varış limanı arasındaki saat farkı toplanıyor.`,
       sub: `Bacak başına ortalama ${n1(shift / S.legs.length)} saat. Jet lag bir his değil, ölçülebilir bir toplam.` }
@@ -873,6 +885,13 @@ function facts(S, K) {
   if (S.hotels.length) add('Otel istirahati', S.hotels.length + ' kez',
     S.hotels.slice(0, 3).map(h => name(h.ap) + ' ' + n1(h.h) + 's').join(' · ') +
     ' — 4–10 saat arası, yatı sayılmaz.', 'ice');
+  add('Dünya seni taşıdı', nf(Math.round(K.hrs * 107226 / 1e6)) + ' milyon km',
+    `Sen havadayken Dünya, Güneş çevresindeki yörüngesinde bu kadar yol aldı —
+     senin uçtuğunun ${nf(Math.round(K.hrs * 107226 / K.km))} katı.`, 'ice');
+  add('Jeostatiner yörünge', nf(Math.round(K.km / 35786)) + ' kez',
+    'Uçtuğun mesafe, yerden uydu yörüngesine bu kadar kez çıkmaya yeterdi.', 'ice');
+  add('Ortalama yer hızı', nf(Math.round(K.km / K.hrs)) + ' km/sa',
+    'Toplam mesafe bölü toplam uçuş süresi. Seyir hızından düşük çünkü tırmanış ve iniş dahil.', 'gold');
   if (far) add('En uzak nokta', nf(Math.round(far.d)) + ' km',
     `${name(far.c)} — İstanbul'dan kuş uçuşu mesafe.`, 'ice');
   if (topRoute) { const [ro, rd] = topRoute[0].split('>');
@@ -907,7 +926,7 @@ function facts(S, K) {
 }
 
 /* ================= tablo ================= */
-let SORT = 'hours', DIR = -1, ROWS = [];
+let SORT = 'hours', DIR = -1, ROWS = [], TBLALL = false;
 function table(S) { ROWS = S.pts.filter(p => !BASE.has(p.c));
   $('#tblCnt').textContent = 'baz dışı ' + ROWS.length + ' nokta'; paint(); }
 function paint() {
@@ -920,7 +939,9 @@ function paint() {
       const x = a[SORT] || '', y = b[SORT] || ''; return (x < y ? -1 : x > y ? 1 : 0) * DIR; }
     return ((a[SORT] || 0) - (b[SORT] || 0)) * DIR;
   });
-  $('#tbody').innerHTML = r.map(p => `<tr data-c="${p.c}">
+  const TL = 25, cut = !TBLALL && !q && r.length > TL;
+  const view = cut ? r.slice(0, TL) : r;
+  $('#tbody').innerHTML = view.map(p => `<tr data-c="${p.c}">
     <td><span class="cityname">${AP[p.c].city}</span><span class="ccode">${p.c}</span>
         <span class="co">${AP[p.c].country}</span></td>
     <td class="mono">${p.visits}</td>
@@ -929,9 +950,17 @@ function paint() {
     <td class="mono hide-s" style="color:var(--mute)">${p.first ? fdate(p.first) : ''}</td>
     <td class="mono hide-s" style="color:var(--mute)">${p.last ? fdate(p.last) : ''}</td>
     <td class="gocell"><span class="go">›</span></td></tr>`).join('')
+    + (cut ? `<tr class="morerow"><td colspan="6"><button class="showmore" id="tblMore">
+        Tamamını göster — ${r.length} nokta ↓</button></td></tr>`
+      : (!q && TBLALL ? `<tr class="morerow"><td colspan="6"><button class="showless" id="tblLess">
+        İlk ${TL} noktaya dön ↑</button></td></tr>` : ''))
     || `<tr><td colspan="6" style="padding:26px;text-align:center;color:var(--mute2)">
         Bu arama bir yere çıkmadı. Şehir, ülke veya havalimanı kodu dene.</td></tr>`;
   document.querySelectorAll('#tbody tr[data-c]').forEach(t => t.onclick = () => openCity(t.dataset.c));
+  const mb = $('#tblMore'), lb = $('#tblLess');
+  if (mb) mb.onclick = () => { TBLALL = true; paint(); };
+  if (lb) lb.onclick = () => { TBLALL = false; paint();
+    document.getElementById('sec-tbl').scrollIntoView({ block: 'start' }); };
 }
 
 /* ================= zaman / filo ================= */
