@@ -257,6 +257,10 @@ tbody tr:hover{background:var(--panel2)}
   padding:10px 13px; font-size:13px}
 .ac b{font-family:'IBM Plex Mono',monospace; font-size:13.5px}
 .ac span{color:var(--mute2); margin-left:8px; font-size:12px}
+.ac i{display:block; font-style:normal; font-family:'IBM Plex Mono',monospace; font-size:9.5px;
+  letter-spacing:.1em; text-transform:uppercase; color:var(--mute2); margin-top:3px}
+.ac.wide{border-color:var(--gold-dim)}
+.ac.wide i{color:var(--gold)}
 
 .offgrid{display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:12px}
 .offcard{background:var(--panel); border:1px solid var(--line); border-radius:var(--r); padding:19px}
@@ -355,17 +359,14 @@ hr.rule{border:0; border-top:1px solid var(--line); margin:14px 0}
 </header>
 
 <div class="hero">
-  <h1 class="disp"><em id="hCities">–</em> şehirde yatı yaptın.<br>Geri kalanına sadece indin.</h1>
-  <p class="lede">Bu defter iki şeyi birbirinden ayırır: bir şehirde <b style="color:var(--gold)">yatı</b> ile
-    <b style="color:var(--ice)">git-gel</b>. Yatı, baz dışında 10 saatten uzun kalıştır — gece yarısını
-    geçmesi şart değil, gündüz yatısı da yatıdır. İkisi de uçuş kaydına aynı satırla yazılır.
-    Ama biri seyahat, öbürü mesai.</p>
+  <h1 class="disp"><em id="heroBig">–</em><br><span id="heroUnit">–</span></h1>
+  <p class="lede" id="heroLede">–</p>
 
   <div class="years" id="years"></div>
 
   <div class="keyrow">
-    <div class="key g"><div class="n" id="kNights">–</div><div class="l">yatı — baz dışında 10 saatten uzun kalış</div></div>
-    <div class="key i"><div class="n" id="kLegs">–</div><div class="l">uçuş bacağı, <span id="kHours">–</span> saat havada</div></div>
+    <div class="key g"><div class="n" id="kLegs">–</div><div class="l">toplam uçuş — bacak sayısı</div></div>
+    <div class="key i"><div class="n" id="kHoursK">–</div><div class="l">saat havada, <span id="kNights">–</span> yatı yaptın</div></div>
     <div class="key"><div class="n" id="kKm">–</div><div class="l" id="kKmL">–</div></div>
     <div class="key"><div class="n" id="kCountries">–</div><div class="l">ülkeye indin, <span id="kSleptC">–</span> tanesinde yatı yaptın</div></div>
   </div>
@@ -397,8 +398,8 @@ hr.rule{border:0; border-top:1px solid var(--line); margin:14px 0}
 
 <section id="sec-stay">
   <div class="shead"><h2>Yatı yaptığın şehirler</h2><span class="cnt" id="stayCnt"></span><span class="hint"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11.5V5a1.8 1.8 0 013.6 0v6"/><path d="M12.6 11V9.2a1.8 1.8 0 013.6 0V11"/><path d="M16.2 11v-.6a1.8 1.8 0 013.6 0V15a6 6 0 01-6 6h-1.5a6 6 0 01-5.2-3l-2.6-4.5a1.8 1.8 0 013.1-1.8L9 13.5"/></svg>dokun</span></div>
-  <p class="sdesc">Sekiz saatten uzun kalışlar. Uçaktan indin, otele gittin, ertesi sabah
-    o şehirde uyandın. Sıralama yatı gecesine göre.</p>
+  <p class="sdesc">On saatten uzun kalışlar. Uçaktan indin, otele gittin, dinlendin.
+    Gece yarısını geçmesi şart değil — gündüz yatısı da yatıdır. Sıralama toplam saate göre.</p>
   <div class="split" id="staySplit"></div>
   <div class="bars" id="stayBars"></div>
 </section>
@@ -630,6 +631,9 @@ function build() {
   Object.values(pts).forEach(p => p.log.sort((a, b) => a.dt < b.dt ? 1 : -1));
   return { legs, stays, hotels, pts: Object.values(pts) };
 }
+const isWide = ac => /7[789]/.test(String(ac));
+const PAX = { narrow: 150, wide: 260 };
+
 function keys(S) {
   const km = S.legs.reduce((a, l) => a + l.km, 0);
   const hrs = S.legs.reduce((a, l) => a + l.dur, 0);
@@ -639,15 +643,17 @@ function keys(S) {
   const sleptC = new Set(S.stays.map(s => s.ap).filter(known).map(a => AP[a].country));
   const sleptCities = new Set(S.stays.map(s => s.ap));
   const stayH = S.stays.reduce((a, s) => a + s.h, 0);
+  const real = S.legs.filter(l => l.o !== l.d);
+  const wideN = real.filter(l => isWide(l.ac)).length, narrowN = real.length - wideN;
+  const pax = narrowN * PAX.narrow + wideN * PAX.wide;
   $('#kNights').textContent = nf(S.stays.length);
   $('#kLegs').textContent = nf(S.legs.length);
-  $('#kHours').textContent = nf(Math.round(hrs));
-  $('#kKm').textContent = nf(Math.round(km / 1000)) + ' bin';
-  $('#kKmL').textContent = 'kilometre — dünyanın çevresini ' + Math.round(km / 40075) + ' kez dolaşmaya yeter';
+  $('#kHoursK').textContent = nf(Math.round(hrs));
+  $('#kKm').textContent = n1(km / 1e6) + ' milyon';
+  $('#kKmL').textContent = 'km — dünyanın çevresini ' + Math.round(km / 40075) + ' kez dolaşmaya yeter';
   $('#kCountries').textContent = countries.size;
   $('#kSleptC').textContent = sleptC.size;
-  $('#hCities').textContent = sleptCities.size;
-  return { km, hrs, nights, stayH, aps, countries, sleptC, sleptCities };
+  return { km, hrs, nights, stayH, aps, countries, sleptC, sleptCities, pax, wideN, narrowN };
 }
 
 /* ================= harita ================= */
@@ -877,6 +883,9 @@ function facts(S, K) {
     `Baz dışına ${arrivals} iniş: ${St.length} tanesi yatı, ${arrivals - St.length} tanesi git-gel.`, 'gold');
   add('Ülke bilançosu', K.sleptC.size + ' / ' + K.countries.size,
     `${K.countries.size} ülkenin toprağına ayak bastın, ${K.sleptC.size} tanesinde yatı yaptın.`, 'gold');
+  add('Uçtuğun insan sayısı', nf(Math.round(K.pax / 1000)) + ' bin',
+    `${nf(K.narrowN)} dar gövde uçuşunda ortalama 150, ${nf(K.wideN)} geniş gövde uçuşunda
+     ortalama 260 yolcu kabul edilerek hesaplandı. Yaklaşık ${nf(K.pax)} kişi.`, 'gold');
   add('En uzun uçuş', n1(longest.dur) + ' saat',
     `TK${longest.no} · ${name(longest.o)} → ${name(longest.d)} · ${fdate(longest.dep)}`, 'ice');
   add('En kısa hat', Math.round(shortest.dur * 60) + ' dakika',
@@ -1117,7 +1126,8 @@ function fleet(S) {
   const t = {}; S.legs.forEach(l => t[l.ac] = (t[l.ac] || 0) + 1);
   const e = Object.entries(t).sort((a, b) => b[1] - a[1]);
   $('#fleetCnt').textContent = e.length + ' tip · ' + new Set(S.legs.map(l => l.tail)).size + ' farklı uçak';
-  $('#fleet').innerHTML = e.map(([k, v]) => `<div class="ac"><b>${k}</b><span>${v}</span></div>`).join('');
+  $('#fleet').innerHTML = e.map(([k, v]) => `<div class="ac${isWide(k) ? ' wide' : ''}"><b>${k}</b>
+    <span>${v}</span><i>${isWide(k) ? 'geniş' : 'dar'}</i></div>`).join('');
 }
 
 /* ================= şehir kartı ================= */
@@ -1328,9 +1338,17 @@ function buildYears() {
     render();
   });
 }
+function heroText(S, K) {
+  $('#heroBig').textContent = nf(Math.round(K.pax / 1000)) + ' bin';
+  $('#heroUnit').textContent = 'kişiyle aynı uçakta uçtun.';
+  $('#heroLede').innerHTML = `${nf(S.legs.length)} uçuşla ${n1(K.km / 1e6)} milyon km kat ettin —
+    dünyanın çevresini ${Math.round(K.km / 40075)} kez dolaşmaya yeter. Yolcu sayısı,
+    dar gövdede ortalama 150, geniş gövdede ortalama 260 kabul edilerek hesaplandı.`;
+}
 function render() {
   CUR = build();
   const K = keys(CUR);
+  heroText(CUR, K);
   drawMap(CUR); comps(CUR, K); bars(CUR); facts(CUR, K); table(CUR); timeline(); duty(CUR); fleet(CUR); offDays();
   const l = CUR.legs;
   $('#hrange').textContent = l.length ? fdate(l[0].dep) + ' — ' + fdate(l[l.length - 1].dep) : '';
