@@ -167,6 +167,10 @@ td.gocell{width:1%; padding-left:0}
 .securefields input:focus{outline:2px solid var(--gold);outline-offset:1px}
 .securebox button{margin-top:10px;background:var(--gold);border:0;color:#12142A;border-radius:9px;padding:10px 14px;cursor:pointer;font:600 14px inherit}
 .securemsg{margin-top:10px;color:var(--mute);font-size:13px}
+.citynote{margin-top:18px;border-top:1px solid var(--line);padding-top:15px}
+.citynote textarea{width:100%;min-height:82px;resize:vertical;background:var(--ink);border:1px solid var(--line);color:var(--text);border-radius:9px;padding:10px;font:inherit}
+.citynote button{margin-top:8px;background:var(--gold);border:0;color:#12142A;border-radius:8px;padding:8px 12px;cursor:pointer;font:600 13px inherit}
+.notemsg{color:var(--mute);font-size:12px;margin-left:8px}
 .lock{position:fixed;inset:0;z-index:20;display:flex;align-items:center;justify-content:center;padding:20px;background:rgba(7,11,30,.96)}
 .lock[hidden]{display:none}
 .lockbox{width:min(430px,100%);padding:26px;border:1px solid var(--line);border-radius:var(--r);background:var(--panel);box-shadow:0 20px 70px rgba(0,0,0,.45)}
@@ -174,7 +178,10 @@ td.gocell{width:1%; padding-left:0}
 .lockbox p{color:var(--mute);font-size:14px;margin-bottom:17px}
 .lockbox input{width:100%;background:var(--ink);border:1px solid var(--line);color:var(--text);border-radius:9px;padding:12px;font:inherit}
 .lockbox button{width:100%;margin-top:10px;background:var(--gold);border:0;color:#12142A;border-radius:9px;padding:12px;cursor:pointer;font:600 14px inherit}
+.remember{display:flex;gap:8px;align-items:center;margin-top:12px;color:var(--mute);font-size:12px}
+.remember input{width:auto}
 .lockerr{min-height:20px;margin-top:10px;color:var(--rose);font-size:13px}
+.sharebtn{margin-top:16px;background:rgba(91,211,232,.09);border:1px solid var(--ice-dim);color:var(--ice);border-radius:10px;padding:11px 15px;cursor:pointer;font:600 14px inherit}
 .more{display:flex; flex-direction:column; gap:2px}
 .more[hidden]{display:none}
 .tailnote{padding:16px 4px 0; color:var(--mute2); font-size:13px}
@@ -385,6 +392,7 @@ hr.rule{border:0; border-top:1px solid var(--line); margin:14px 0}
     <div class="key"><div class="n" id="kKm">–</div><div class="l" id="kKmL">–</div></div>
     <div class="key"><div class="n" id="kCountries">–</div><div class="l">ülkeye indin, <span id="kSleptC">–</span> tanesinde yatı yaptın</div></div>
   </div>
+  <button class="sharebtn" id="shareCard">Anonim kariyer kartını indir</button>
 </div>
 
 <div class="mapbox">
@@ -430,6 +438,24 @@ hr.rule{border:0; border-top:1px solid var(--line); margin:14px 0}
   <div class="shead"><h2>Kayıttan çıkanlar</h2></div>
   <p class="sdesc">Uçuş kaydının içinde duran ama hiçbir raporda karşına çıkmayan rakamlar.</p>
   <div class="facts" id="facts"></div>
+</section>
+
+<section id="sec-compare">
+  <div class="shead"><h2>Yıllar birbirine karşı</h2><span class="cnt" id="compareCnt"></span></div>
+  <p class="sdesc">Hangi yıl daha çok uçtun, hangisinde daha uzağa gittin? Aynı kariyerin farklı sezonlarını yan yana gör.</p>
+  <div class="tblwrap"><table><thead><tr><th>Yıl</th><th>Uçuş</th><th>Saat</th><th>Mesafe</th><th>Yatı</th><th>Nokta</th></tr></thead><tbody id="compareBody"></tbody></table></div>
+</section>
+
+<section id="sec-records">
+  <div class="shead"><h2>Rekorlar</h2></div>
+  <p class="sdesc">Kayıtlarının içinden çıkan, tek satırlık raporlarda görünmeyen kişisel rekorların.</p>
+  <div class="facts" id="records"></div>
+</section>
+
+<section id="sec-milestones">
+  <div class="shead"><h2>Kariyer kilometre taşları</h2></div>
+  <p class="sdesc">Uçuş listesini bir kronolojiye çevirince ortaya çıkan ilkler, eşikler ve dönüm noktaları.</p>
+  <div class="facts" id="milestones"></div>
 </section>
 
 <section id="sec-tbl">
@@ -563,6 +589,7 @@ hr.rule{border:0; border-top:1px solid var(--line); margin:14px 0}
     <h2>TK MAZİ kilitli</h2>
     <p>Uçuş arşivini açmak için kendi belirlediğin parolayı gir. Parola sunucuya gönderilmez.</p>
     <input type="password" id="unlockPass" autocomplete="current-password" placeholder="Arşiv parolası">
+    <label class="remember"><input type="checkbox" id="rememberUnlock"> Bu oturumda tekrar sorma</label>
     <button id="unlockBtn">Arşivi aç</button>
     <div class="lockerr" id="lockErr" role="status"></div>
   </div>
@@ -587,6 +614,7 @@ const isoLocal = ms => { const d = new Date(ms);
 const fdate = s => { const d = new Date(U(s));
   return d.getUTCDate() + ' ' + MON[d.getUTCMonth()] + ' ' + String(d.getUTCFullYear()).slice(2); };
 const name = c => AP[c] ? AP[c].city : c;
+const esc = s => String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const known = c => AP[c] && AP[c].lat !== null && AP[c].lat !== undefined;
 
 function gc(a, b) {
@@ -974,8 +1002,83 @@ function facts(S, K) {
   if (ret) add('Havalanıp geri dönme', ret + ' kez',
     'Kalkış limanına geri inen uçuş — hava dönüşü.', 'rose');
   add('Kıta', conts.size + ' kıta', [...conts].sort().join(' · '), 'gold');
+  add('Dünyanın çevresi', n1(K.km / 40075) + ' tur',
+    'Uçtuğun toplam mesafe, Dünya’nın ekvatorunu bu kadar kez dolaşmaya yetiyor.', 'gold');
+  add('Ay mesafesi', n1(K.km / 768800) + ' gidiş-dönüş',
+    'Dünya–Ay arası gidiş-dönüş yaklaşık 768.800 km kabulüyle.', 'ice');
+  const zones = new Set(L.flatMap(l => [tz(l.o), tz(l.d)]));
+  add('Saat dilimi atlası', zones.size + ' farklı fark',
+    [...zones].sort((a, b) => a - b).map(x => (x >= 0 ? '+' : '') + x).join(' · ') + ' UTC değeri.', 'gold');
   $('#facts').innerHTML = F.map(f =>
     `<div class="fact ${f.cl}"><div class="k">${f.k}</div><div class="n">${f.n}</div><div class="d">${f.d}</div></div>`).join('');
+}
+
+function yearlyStats(year) {
+  const legs = D.legs.filter(l => l.dep.startsWith(year));
+  const stays = (D.stays || []).filter(s => s.in.startsWith(year));
+  const points = new Set(legs.map(l => l.d).filter(c => !BASE.has(c)));
+  return { year, legs, stays, hours: legs.reduce((a, l) => a + l.dur, 0), km: legs.reduce((a, l) => a + l.km, 0), points };
+}
+function compareYears() {
+  const years = [...new Set(D.legs.map(l => l.dep.slice(0, 4)))].sort((a, b) => b - a);
+  $('#compareCnt').textContent = years.length + ' sezon';
+  $('#compareBody').innerHTML = years.map(y => {
+    const s = yearlyStats(y);
+    return `<tr><td><b>${y}</b></td><td>${nf(s.legs.length)}</td><td>${n1(s.hours)}</td>
+      <td>${n1(s.km / 1000)} bin km</td><td>${nf(s.stays.length)}</td><td>${nf(s.points.size)}</td></tr>`;
+  }).join('');
+}
+function records() {
+  const L = D.legs, St = D.stays || [], add = (k, n, d, cl) => `<div class="fact ${cl || ''}"><div class="k">${k}</div><div class="n">${n}</div><div class="d">${d}</div></div>`;
+  if (!L.length) { $('#records').innerHTML = ''; return; }
+  const longest = [...L].sort((a, b) => b.dur - a.dur)[0];
+  const longestStay = [...St].sort((a, b) => b.h - a.h)[0];
+  const days = {}; L.forEach(l => days[l.dep.slice(0, 10)] = (days[l.dep.slice(0, 10)] || 0) + 1);
+  const busiestDay = Object.entries(days).sort((a, b) => b[1] - a[1])[0];
+  const months = {}; L.forEach(l => months[l.dep.slice(0, 7)] = (months[l.dep.slice(0, 7)] || 0) + 1);
+  const busiestMonth = Object.entries(months).sort((a, b) => b[1] - a[1])[0];
+  const routes = {}; L.forEach(l => { if (l.o !== l.d) { const k = l.o + '>' + l.d; routes[k] = (routes[k] || 0) + 1; } });
+  const route = Object.entries(routes).sort((a, b) => b[1] - a[1])[0];
+  const ys = [...new Set(L.map(l => l.dep.slice(0, 4)))].map(yearlyStats);
+  const busiestYear = [...ys].sort((a, b) => b.legs.length - a.legs.length)[0];
+  const farthest = [...L].sort((a, b) => b.km - a.km)[0];
+  const F = [
+    add('En uzun uçuş', n1(longest.dur) + ' saat', `TK${longest.no} · ${name(longest.o)} → ${name(longest.d)}`, 'ice'),
+    longestStay ? add('En uzun yatı', Math.round(longestStay.h) + ' saat', `${name(longestStay.ap)} · ${fdate(longestStay.in)}`, 'gold') : '',
+    add('Bir günde en çok', busiestDay[1] + ' bacak', fdate(busiestDay[0] + 'T00:00'), 'rose'),
+    add('En yoğun ay', busiestMonth[1] + ' bacak', `${MON[+busiestMonth[0].slice(5) - 1]} ${busiestMonth[0].slice(0, 4)}`, 'gold'),
+    route ? add('En çok tekrarlanan hat', route[1] + ' kez', `${name(route[0].split('>')[0])} → ${name(route[0].split('>')[1])}`, 'ice') : '',
+    add('En yoğun yıl', busiestYear.legs.length + ' uçuş', `${busiestYear.year} · ${n1(busiestYear.km / 1000)} bin km`, 'gold'),
+    add('Tek uçuşta en uzak', n1(farthest.km / 1000) + ' bin km', `TK${farthest.no} · ${name(farthest.o)} → ${name(farthest.d)}`, 'ice')
+  ];
+  $('#records').innerHTML = F.join('');
+}
+function milestones() {
+  const L = D.legs, F = [], add = (k, n, d, cl) => F.push(`<div class="fact ${cl || ''}"><div class="k">${k}</div><div class="n">${n}</div><div class="d">${d}</div></div>`);
+  if (!L.length) { $('#milestones').innerHTML = ''; return; }
+  const first = L[0], firstIntl = L.find(l => l.o !== l.d && !BASE.has(l.d));
+  const firstStay = (D.stays || []).slice().sort((a, b) => a.in.localeCompare(b.in))[0];
+  const firstWide = L.find(l => isWide(l.ac));
+  const thresholds = [500, 1000].filter(n => L.length >= n);
+  add('İlk kayıt', fdate(first.dep), `TK${first.no} · ${name(first.o)} → ${name(first.d)}`, 'gold');
+  if (firstIntl) add('İlk baz dışı uçuş', fdate(firstIntl.dep), `TK${firstIntl.no} · ${name(firstIntl.o)} → ${name(firstIntl.d)}`, 'ice');
+  if (firstStay) add('İlk yatı', fdate(firstStay.in), `${name(firstStay.ap)} · ${n1(firstStay.h)} saat`, 'gold');
+  if (firstWide) add('İlk geniş gövde', fdate(firstWide.dep), `TK${firstWide.no} · ${firstWide.ac} · ${name(firstWide.o)} → ${name(firstWide.d)}`, 'ice');
+  thresholds.forEach(n => { const l = L[n - 1]; add(`${n}. uçuş`, fdate(l.dep), `TK${l.no} · ${name(l.o)} → ${name(l.d)}`, 'gold'); });
+  $('#milestones').innerHTML = F.join('');
+}
+function makeShareCard() {
+  const K = keys({ legs: D.legs, stays: (D.stays || []).filter(s => !s.hotel), hotels: [], pts: [] });
+  const canvas = document.createElement('canvas'); canvas.width = 1200; canvas.height = 630;
+  const c = canvas.getContext('2d');
+  const g = c.createLinearGradient(0, 0, 1200, 630); g.addColorStop(0, '#0E1430'); g.addColorStop(1, '#070B1E'); c.fillStyle = g; c.fillRect(0, 0, 1200, 630);
+  c.fillStyle = '#F5B845'; c.font = '700 24px Arial'; c.fillText('TK MAZİ', 72, 78);
+  c.fillStyle = '#EAEAF6'; c.font = '800 62px Arial'; c.fillText('UÇUŞ KARİYERİ', 72, 170);
+  c.fillStyle = '#7E86B4'; c.font = '24px Arial'; c.fillText('Anonim özet · veriler cihazda işlendi', 76, 215);
+  const items = [[nf(D.legs.length), 'uçuş'], [n1(K.km / 1e6) + ' M', 'km'], [nf(K.countries.size), 'ülke'], [nf((D.stays || []).filter(s => !s.hotel).length), 'yatı']];
+  items.forEach((x, i) => { const px = 78 + (i % 2) * 520, py = 330 + Math.floor(i / 2) * 150; c.fillStyle = i % 2 ? '#5BD3E8' : '#F5B845'; c.font = '800 48px Arial'; c.fillText(x[0], px, py); c.fillStyle = '#7E86B4'; c.font = '22px Arial'; c.fillText(x[1], px, py + 34); });
+  c.fillStyle = '#565E8C'; c.font = '18px Arial'; c.fillText('MaziTK · kişisel uçuş arşivi', 78, 580);
+  const a = document.createElement('a'); a.download = 'mazitk-kariyer-karti.png'; a.href = canvas.toDataURL('image/png'); a.click();
 }
 
 /* ================= tablo ================= */
@@ -1159,11 +1262,11 @@ function duty(S) {
       dinlenme sayılır.</div>`;
 }
 function fleet(S) {
-  const t = {}; S.legs.forEach(l => t[l.ac] = (t[l.ac] || 0) + 1);
+  const t = {}, tails = {}; S.legs.forEach(l => { t[l.ac] = (t[l.ac] || 0) + 1; (tails[l.ac] ||= new Set()).add(l.tail); });
   const e = Object.entries(t).sort((a, b) => b[1] - a[1]);
   $('#fleetCnt').textContent = e.length + ' tip · ' + new Set(S.legs.map(l => l.tail)).size + ' farklı uçak';
   $('#fleet').innerHTML = e.map(([k, v]) => `<div class="ac${isWide(k) ? ' wide' : ''}"><b>${k}</b>
-    <span>${v}</span><i>${isWide(k) ? 'geniş' : 'dar'}</i></div>`).join('');
+    <span>${v}</span><i>${tails[k].size} uçak · ${isWide(k) ? 'geniş' : 'dar'}</i></div>`).join('');
 }
 
 /* ================= şehir kartı ================= */
@@ -1174,8 +1277,11 @@ function openCity(c) {
     <div class="sheet-h"><div><h3>${a.city}</h3>
       <div class="sub">${a.country} · <span class="mono">${c}</span> · ${a.cont}${isB ? ' · baz' : ''}</div></div>
       <button class="xbtn" id="x" aria-label="Kapat">×</button></div>
-    ${isB ? '' : sheetBody(p)}`;
+    ${isB ? '' : sheetBody(p) + `<div class="citynote"><div class="eyebrow">Kişisel not</div>
+      <textarea id="cityNote" placeholder="Bu şehirle ilgili kısa bir anı veya not…">${esc((D.notes || {})[c])}</textarea>
+      <button id="saveNote">Notu kaydet</button><span class="notemsg" id="noteMsg"></span></div>`}`;
   $('#ov').classList.add('on'); $('#x').onclick = close;
+  if (!isB) $('#saveNote').onclick = () => { D.notes = D.notes || {}; D.notes[c] = $('#cityNote').value.trim(); $('#noteMsg').textContent = 'Bu oturumda kaydedildi. Şifreli arşivi dışa aktarmayı unutma.'; };
 }
 function visRow(v) {
   const tag = v.slept ? n1(v.h) + ' saat' : v.hotel ? n1(v.h) + ' saat otel' : 'git-gel';
@@ -1358,7 +1464,7 @@ function downloadData(filename = 'data.json') {
   const slim = D.legs.map(l => ({ no: l.no, o: l.o, d: l.d, dep: l.dep, arr: l.arr,
     dur: l.dur, ac: l.ac, tail: l.tail, pos: l.pos, rank: l.rank }));
   const blob = new Blob([JSON.stringify({ legs: slim, airports: AP, base: D.base,
-    acts: D.acts || [], actLabels: D.actLabels || {}, name: D.name,
+    acts: D.acts || [], notes: D.notes || {}, actLabels: D.actLabels || {}, name: D.name,
     updated: new Date().toISOString().slice(0, 10) })], { type: 'application/json' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob); a.download = filename; a.click();
@@ -1372,7 +1478,7 @@ const b64 = bytes => {
 function exportPayload() {
   const slim = D.legs.map(l => ({ no: l.no, o: l.o, d: l.d, dep: l.dep, arr: l.arr,
     dur: l.dur, ac: l.ac, tail: l.tail, pos: l.pos, rank: l.rank }));
-  return { legs: slim, airports: AP, base: D.base, acts: D.acts || [],
+  return { legs: slim, airports: AP, base: D.base, acts: D.acts || [], notes: D.notes || {},
     actLabels: D.actLabels || {}, name: D.name, updated: new Date().toISOString().slice(0, 10) };
 }
 async function exportSecureData() {
@@ -1407,7 +1513,7 @@ drop.addEventListener('drop', e => { const f = e.dataTransfer.files[0]; if (f) i
 
 /* ================= çalıştır ================= */
 const NAV = [['sec-comp','Rakamlar'],['sec-stay','Yatılar'],['sec-pass','Git-geller'],
-  ['sec-facts','Kayıttan çıkanlar'],['sec-tbl','Noktalar'],['sec-time','Zaman çizgisi'],
+  ['sec-facts','Kayıttan çıkanlar'],['sec-compare','Yıllar'],['sec-records','Rekorlar'],['sec-milestones','Kilometre taşları'],['sec-tbl','Noktalar'],['sec-time','Zaman çizgisi'],
   ['sec-duty','Görev süresi'],['sec-off','Uçuş dışı günler'],['sec-fleet','Filo'],
   ['sec-update','Güncelle']];
 $('#secnav').innerHTML = NAV.map(([id, n]) => `<a href="#${id}">${n}</a>`).join('');
@@ -1431,7 +1537,7 @@ function render() {
   CUR = build();
   const K = keys(CUR);
   heroText(CUR, K);
-  drawMap(CUR); comps(CUR, K); bars(CUR); facts(CUR, K); table(CUR); timeline(); duty(CUR); fleet(CUR); offDays();
+  drawMap(CUR); comps(CUR, K); bars(CUR); facts(CUR, K); compareYears(); records(); milestones(); table(CUR); timeline(); duty(CUR); fleet(CUR); offDays();
   const l = CUR.legs;
   $('#hrange').textContent = l.length ? fdate(l[0].dep) + ' — ' + fdate(l[l.length - 1].dep) : '';
 }
@@ -1442,6 +1548,7 @@ document.querySelectorAll('th[data-s]').forEach(th => th.onclick = () => {
   th.setAttribute('data-active', ''); paint();
 });
 $('#q').oninput = paint;
+$('#shareCard').onclick = makeShareCard;
 document.querySelectorAll('.mf').forEach(b => b.onclick = () => {
   MAPF = b.dataset.f;
   document.querySelectorAll('.mf').forEach(x => x.setAttribute('aria-pressed', x === b));
@@ -1486,6 +1593,7 @@ async function unlockSecure() {
     const data = JSON.parse(new TextDecoder().decode(plain));
     if (!Array.isArray(data.legs) || !data.legs.length) throw new Error('empty');
     D = Object.assign({}, D, data);
+    if ($('#rememberUnlock').checked) sessionStorage.setItem('mazitk_session_data', JSON.stringify(data));
     $('#lock').hidden = true;
     $('#unlockPass').value = '';
     start();
@@ -1496,6 +1604,15 @@ $('#unlockPass').onkeydown = e => { if (e.key === 'Enter') unlockSecure(); };
 
 async function start() {
   let src = '';
+  if (!D.legs.length) {
+    try {
+      const remembered = sessionStorage.getItem('mazitk_session_data');
+      if (remembered) {
+        const data = JSON.parse(remembered);
+        if (Array.isArray(data.legs) && data.legs.length) { D = Object.assign({}, D, data); }
+      }
+    } catch (e) { sessionStorage.removeItem('mazitk_session_data'); }
+  }
   if (!D.legs.length) {
     try {
       const r = await fetch('data.secure.json', { cache: 'no-store' });
