@@ -171,6 +171,19 @@ td.gocell{width:1%; padding-left:0}
 .citynote textarea{width:100%;min-height:82px;resize:vertical;background:var(--ink);border:1px solid var(--line);color:var(--text);border-radius:9px;padding:10px;font:inherit}
 .citynote button{margin-top:8px;background:var(--gold);border:0;color:#12142A;border-radius:8px;padding:8px 12px;cursor:pointer;font:600 13px inherit}
 .notemsg{color:var(--mute);font-size:12px;margin-left:8px}
+.profilegrid{display:grid;grid-template-columns:1.2fr 1fr;gap:12px}
+.profilehero,.profilecard{background:linear-gradient(160deg,var(--panel2),var(--panel));border:1px solid var(--line);border-radius:var(--r);padding:20px}
+.profilehero h3{font-family:'Archivo',sans-serif;font-size:25px;margin:8px 0 10px;color:var(--gold)}
+.profilehero p{color:var(--mute);font-size:15px;line-height:1.65}
+.profilecard .pk{font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--mute2)}
+.profilecard .pv{font-family:'Archivo',sans-serif;font-size:28px;margin:8px 0 4px;color:var(--ice)}
+.profilecard .pd{color:var(--mute);font-size:13px}
+.rhythm{display:grid;grid-template-columns:repeat(12,1fr);gap:5px;align-items:end;height:150px;padding:8px 2px 0;border-bottom:1px solid var(--line)}
+.rhythm .col{display:flex;flex-direction:column;justify-content:end;height:100%;min-width:0}
+.rhythm .bar{min-height:3px;border-radius:4px 4px 0 0;background:linear-gradient(180deg,var(--ice),var(--ice-dim));cursor:default}
+.rhythm .bar.hot{background:linear-gradient(180deg,var(--gold),var(--gold-dim))}
+.rhythm .lab{text-align:center;color:var(--mute2);font:10px 'IBM Plex Mono',monospace;margin-top:7px}
+@media(max-width:720px){.profilegrid{grid-template-columns:1fr}.rhythm{gap:3px}.rhythm .lab{font-size:9px}}
 .lock{position:fixed;inset:0;z-index:20;display:flex;align-items:center;justify-content:center;padding:20px;background:rgba(7,11,30,.96)}
 .lock[hidden]{display:none}
 .lockbox{width:min(430px,100%);padding:26px;border:1px solid var(--line);border-radius:var(--r);background:var(--panel);box-shadow:0 20px 70px rgba(0,0,0,.45)}
@@ -411,6 +424,23 @@ hr.rule{border:0; border-top:1px solid var(--line); margin:14px 0}
   <svg id="map" viewBox="0 0 1000 460" preserveAspectRatio="xMidYMid meet"></svg>
   <div class="tip" id="tip"></div>
 </div>
+
+<section id="sec-profile">
+  <div class="shead"><h2>Bu arşiv ne anlatıyor?</h2></div>
+  <p class="sdesc">Uçuş rakamlarından çıkan kişisel profilin ve kariyerinin kısa okuması.</p>
+  <div class="profilegrid">
+    <div class="profilehero"><div class="eyebrow">Uçuş karakterin</div><h3 id="profileTitle">–</h3><p id="profileText">–</p></div>
+    <div class="profilecard"><div class="pk">Baskın yön</div><div class="pv" id="profileDirection">–</div><div class="pd" id="profileDirectionText">–</div></div>
+    <div class="profilecard"><div class="pk">Yatı / git-gel dengesi</div><div class="pv" id="profileStay">–</div><div class="pd" id="profileStayText">–</div></div>
+    <div class="profilecard"><div class="pk">Geniş gövde payı</div><div class="pv" id="profileWide">–</div><div class="pd" id="profileWideText">–</div></div>
+  </div>
+</section>
+
+<section id="sec-rhythm">
+  <div class="shead"><h2>Uçuş ritmin</h2><span class="cnt" id="rhythmCnt"></span></div>
+  <p class="sdesc">Kariyer boyunca hangi ayların yoğun, hangilerinin sakin geçtiği. Altın çubuklar o yılın en yoğun aylarını gösterir.</p>
+  <div class="rhythm" id="rhythm"></div>
+</section>
 
 <section id="sec-comp">
   <div class="shead"><h2>Rakamların karşılığı</h2></div>
@@ -1067,6 +1097,36 @@ function milestones() {
   thresholds.forEach(n => { const l = L[n - 1]; add(`${n}. uçuş`, fdate(l.dep), `TK${l.no} · ${name(l.o)} → ${name(l.d)}`, 'gold'); });
   $('#milestones').innerHTML = F.join('');
 }
+function profile() {
+  const L = D.legs, St = (D.stays || []).filter(s => !s.hotel);
+  if (!L.length) return;
+  const countries = new Set(L.filter(l => known(l.d)).map(l => AP[l.d].country));
+  const wide = L.filter(l => isWide(l.ac)).length, stayRatio = St.length / Math.max(1, L.filter(l => !BASE.has(l.d)).length);
+  const east = L.reduce((x, l) => x + Math.max(0, tz(l.d) - tz(l.o)), 0), west = L.reduce((x, l) => x + Math.max(0, tz(l.o) - tz(l.d)), 0);
+  const years = [...new Set(L.map(l => l.dep.slice(0, 4)))].map(yearlyStats).sort((a, b) => b.legs.length - a.legs.length);
+  const direction = east >= west ? 'Doğu ağırlıklı' : 'Batı ağırlıklı';
+  const title = stayRatio >= .55 ? 'Yatılı uzun menzilci' : wide / L.length >= .35 ? 'Geniş gövde gezgini' : countries.size >= 30 ? 'Rota koleksiyoncusu' : 'Düzenli gökyüzü insanı';
+  const top = years[0];
+  const topRoute = {}; L.forEach(l => { if (l.o !== l.d) topRoute[l.o + '>' + l.d] = (topRoute[l.o + '>' + l.d] || 0) + 1; });
+  const route = Object.entries(topRoute).sort((a, b) => b[1] - a[1])[0];
+  $('#profileTitle').textContent = title;
+  $('#profileText').textContent = `${L.length} uçuşluk arşivin ${countries.size} ülkeye uzanıyor. ` +
+    `${Math.round(stayRatio * 100)}% oranında yatılı görev yapmışsın; ${wide} uçuşun geniş gövdede. ` +
+    `${top.year} yılında ${top.legs.length} uçuşla en yoğun sezonunu yaşamışsın` +
+    (route ? `, en çok da ${name(route[0].split('>')[0])} → ${name(route[0].split('>')[1])} hattını kullanmışsın.` : '.');
+  $('#profileDirection').textContent = direction;
+  $('#profileDirectionText').textContent = `Doğuya ${Math.round(east)} saat, batıya ${Math.round(west)} saatlik saat farkı biriktirdin.`;
+  $('#profileStay').textContent = '%' + Math.round(stayRatio * 100);
+  $('#profileStayText').textContent = `${St.length} yatı, ${L.filter(l => !BASE.has(l.d)).length - St.length} git-gel.`;
+  $('#profileWide').textContent = '%' + Math.round(wide / Math.max(1, L.length) * 100);
+  $('#profileWideText').textContent = `${wide} geniş gövde, ${L.length - wide} dar gövde bacağı.`;
+}
+function rhythm() {
+  const counts = Array(12).fill(0); D.legs.forEach(l => counts[+l.dep.slice(5, 7) - 1]++);
+  const mx = Math.max(1, ...counts), hot = new Set(counts.map((v, i) => [v, i]).sort((a, b) => b[0] - a[0]).slice(0, 3).map(x => x[1]));
+  $('#rhythmCnt').textContent = nf(D.legs.length) + ' bacak';
+  $('#rhythm').innerHTML = counts.map((v, i) => `<div class="col"><div class="bar${hot.has(i) ? ' hot' : ''}" style="height:${Math.max(3, v / mx * 100)}%" title="${MON[i]}: ${v} uçuş"></div><div class="lab">${MON[i]}</div></div>`).join('');
+}
 function makeShareCard() {
   const K = keys({ legs: D.legs, stays: (D.stays || []).filter(s => !s.hotel), hotels: [], pts: [] });
   const canvas = document.createElement('canvas'); canvas.width = 1200; canvas.height = 630;
@@ -1513,7 +1573,7 @@ drop.addEventListener('drop', e => { const f = e.dataTransfer.files[0]; if (f) i
 
 /* ================= çalıştır ================= */
 const NAV = [['sec-comp','Rakamlar'],['sec-stay','Yatılar'],['sec-pass','Git-geller'],
-  ['sec-facts','Kayıttan çıkanlar'],['sec-compare','Yıllar'],['sec-records','Rekorlar'],['sec-milestones','Kilometre taşları'],['sec-tbl','Noktalar'],['sec-time','Zaman çizgisi'],
+  ['sec-profile','Uçuş karakteri'],['sec-rhythm','Uçuş ritmi'],['sec-facts','Kayıttan çıkanlar'],['sec-compare','Yıllar'],['sec-records','Rekorlar'],['sec-milestones','Kilometre taşları'],['sec-tbl','Noktalar'],['sec-time','Zaman çizgisi'],
   ['sec-duty','Görev süresi'],['sec-off','Uçuş dışı günler'],['sec-fleet','Filo'],
   ['sec-update','Güncelle']];
 $('#secnav').innerHTML = NAV.map(([id, n]) => `<a href="#${id}">${n}</a>`).join('');
@@ -1537,7 +1597,7 @@ function render() {
   CUR = build();
   const K = keys(CUR);
   heroText(CUR, K);
-  drawMap(CUR); comps(CUR, K); bars(CUR); facts(CUR, K); compareYears(); records(); milestones(); table(CUR); timeline(); duty(CUR); fleet(CUR); offDays();
+  drawMap(CUR); comps(CUR, K); bars(CUR); facts(CUR, K); profile(); rhythm(); compareYears(); records(); milestones(); table(CUR); timeline(); duty(CUR); fleet(CUR); offDays();
   const l = CUR.legs;
   $('#hrange').textContent = l.length ? fdate(l[0].dep) + ' — ' + fdate(l[l.length - 1].dep) : '';
 }
