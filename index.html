@@ -160,6 +160,13 @@ td.gocell{width:1%; padding-left:0}
 .showless{margin:10px 0 0; background:transparent; border:1px solid var(--line); color:var(--mute);
   border-radius:10px; padding:11px 18px; cursor:pointer; font-family:inherit; font-size:13.5px; width:100%}
 .showless:hover{color:var(--text)}
+.securebox{margin-top:18px;padding:16px;border:1px solid var(--gold-dim);border-radius:var(--r);background:rgba(245,184,69,.06)}
+.securebox p{color:var(--mute);font-size:13.5px;margin-bottom:12px}
+.securefields{display:flex;gap:10px;flex-wrap:wrap}
+.securefields input{flex:1;min-width:180px;background:var(--panel);border:1px solid var(--line);color:var(--text);border-radius:9px;padding:10px 12px;font:inherit}
+.securefields input:focus{outline:2px solid var(--gold);outline-offset:1px}
+.securebox button{margin-top:10px;background:var(--gold);border:0;color:#12142A;border-radius:9px;padding:10px 14px;cursor:pointer;font:600 14px inherit}
+.securemsg{margin-top:10px;color:var(--mute);font-size:13px}
 .more{display:flex; flex-direction:column; gap:2px}
 .more[hidden]{display:none}
 .tailnote{padding:16px 4px 0; color:var(--mute2); font-size:13px}
@@ -490,6 +497,17 @@ hr.rule{border:0; border-top:1px solid var(--line); margin:14px 0}
 
   <div class="report" id="report"><div class="rh" id="rh"></div><div class="rb" id="rb"></div></div>
 
+  <div class="securebox">
+    <b>Arşivini şifreli olarak dışa aktar</b>
+    <p>Ham uçuş verisini GitHub’a koymadan önce AES-GCM ile şifreli dosya oluştur. Parola tarayıcıdan çıkmaz.</p>
+    <div class="securefields">
+      <input type="password" id="securePass" autocomplete="new-password" placeholder="Yeni parola">
+      <input type="password" id="securePass2" autocomplete="new-password" placeholder="Parolayı tekrar yaz">
+    </div>
+    <button id="secureExport">Şifreli data.secure.json oluştur</button>
+    <div class="securemsg" id="secureMsg" role="status"></div>
+  </div>
+
   <ol class="steps">
     <li>Yeni raporu yükle, sayfa anında güncellensin.</li>
     <li>Kalıcı olması için <b>Güncellenmiş veriyi indir</b> düğmesine bas; <code>data.json</code> iner.</li>
@@ -500,7 +518,7 @@ hr.rule{border:0; border-top:1px solid var(--line); margin:14px 0}
 
 <footer>
   <b>Kaynak:</b> THY Aktivite Raporu (ACTUAL/INFORMED) — gerçekleşen kayıt, plan değil.<br>
-  <b>Yatı tanımı:</b> baz dışı bir limanda iki uçuş arasında 8 saatten uzun kalış.
+  <b>Yatı tanımı:</b> baz dışı bir limanda iki uçuş arasında 10 saatten uzun kalış.
   Yatı gecesi, o limanın yerel saatine göre geçilen gece yarısı sayısıdır.<br>
   <b>Saatler:</b> kayıttaki bütün zamanlar UTC. Yerel saatler standart zaman dilimi farkıyla
   hesaplanır, yaz saati uygulanmaz; bu yüzden gece yarısına çok yakın kalkışlarda bir saatlik
@@ -1258,6 +1276,11 @@ async function importFile(file) {
   }
   if (freshA.length) { D.acts.sort((a, b) => a.s < b.s ? -1 : 1); offDays(); }
   if (!fresh.length) {
+    if (freshA.length && !window.confirm(`Yeni uçuş yok; ${nf(freshA.length)} uçuş dışı kayıt bulundu.\n\nMevcut kaydın yedeği indirilsin ve bu kayıtlar uygulansın mı?`)) return;
+    if (freshA.length) {
+      downloadData('data-backup-before-import.json');
+      D.acts.push(...freshA);
+    }
     const ad = freshA.reduce((x, a) => x + a.d, 0);
     rh.innerHTML = freshA.length
       ? `<b style="color:var(--gold)">${nf(freshA.length)} uçuş dışı kayıt eklendi</b> — ${nf(ad)} gün.`
@@ -1268,6 +1291,15 @@ async function importFile(file) {
     if (freshA.length) $('#dl').onclick = downloadData;
     return;
   }
+  const newActivityDays = freshA.reduce((x, a) => x + a.d, 0);
+  const summary = `Bu dosyada ${nf(fresh.length)} yeni uçuş ve ${nf(freshA.length)} uçuş dışı kayıt bulundu.\n\n` +
+    `${nf(dup)} uçuş zaten kayıtlı, ${nf(bad)} satır hatalı.` +
+    (unknown.size ? `\n\nTanımsız havalimanları: ${[...unknown].join(', ')}` : '') +
+    `\n\nYeni uçuş dışı gün toplamı: ${nf(newActivityDays)}.` +
+    `\n\nMevcut kaydın yedeği indirilsin ve yeni kayıtlar uygulansın mı?`;
+  if (!window.confirm(summary)) return;
+  downloadData('data-backup-before-import.json');
+  D.acts.push(...freshA);
   D.legs = prepare(D.legs.concat(fresh));
   D.stays = computeStays(D.legs);
   YEARS = [...new Set(D.legs.map(l => l.dep.slice(0, 4)))].sort();
@@ -1302,18 +1334,46 @@ function addAct(r, ix, seenA, freshA) {
   if (!n && grp === 'SBY') n = String(r[ix.grpd] || '').startsWith('Airp') ? 'Havalimanı standby' : 'Ev standby';
   if (!n) n = String(r[ix.codeName] || code).split('/')[0].trim() || code;
   const a = { g: ACTGRP[grp] || 'kurumsal', grp, c: code, n, s, d: days, h: +hrs.toFixed(1) };
-  D.acts.push(a); freshA.push(a);
+  freshA.push(a);
 }
-function downloadData() {
+function downloadData(filename = 'data.json') {
   const slim = D.legs.map(l => ({ no: l.no, o: l.o, d: l.d, dep: l.dep, arr: l.arr,
     dur: l.dur, ac: l.ac, tail: l.tail, pos: l.pos, rank: l.rank }));
   const blob = new Blob([JSON.stringify({ legs: slim, airports: AP, base: D.base,
     acts: D.acts || [], actLabels: D.actLabels || {}, name: D.name,
     updated: new Date().toISOString().slice(0, 10) })], { type: 'application/json' });
   const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob); a.download = 'data.json'; a.click();
+  a.href = URL.createObjectURL(blob); a.download = filename; a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 4000);
 }
+const b64 = bytes => {
+  const a = new Uint8Array(bytes); let s = '';
+  for (let i = 0; i < a.length; i += 0x8000) s += String.fromCharCode(...a.subarray(i, i + 0x8000));
+  return btoa(s);
+};
+function exportPayload() {
+  const slim = D.legs.map(l => ({ no: l.no, o: l.o, d: l.d, dep: l.dep, arr: l.arr,
+    dur: l.dur, ac: l.ac, tail: l.tail, pos: l.pos, rank: l.rank }));
+  return { legs: slim, airports: AP, base: D.base, acts: D.acts || [],
+    actLabels: D.actLabels || {}, name: D.name, updated: new Date().toISOString().slice(0, 10) };
+}
+async function exportSecureData() {
+  const msg = $('#secureMsg'), p1 = $('#securePass').value, p2 = $('#securePass2').value;
+  if (p1.length < 8) { msg.textContent = 'Parola en az 8 karakter olmalı.'; return; }
+  if (p1 !== p2) { msg.textContent = 'Parolalar eşleşmiyor.'; return; }
+  const enc = new TextEncoder(), salt = crypto.getRandomValues(new Uint8Array(16));
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const baseKey = await crypto.subtle.importKey('raw', enc.encode(p1), 'PBKDF2', false, ['deriveKey']);
+  const key = await crypto.subtle.deriveKey({ name: 'PBKDF2', salt, iterations: 250000, hash: 'SHA-256' },
+    baseKey, { name: 'AES-GCM', length: 256 }, false, ['encrypt']);
+  const cipher = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, enc.encode(JSON.stringify(exportPayload())));
+  const blob = new Blob([JSON.stringify({ version: 1, algorithm: 'AES-GCM', kdf: 'PBKDF2-SHA256',
+    iterations: 250000, salt: b64(salt), iv: b64(iv), ciphertext: b64(cipher) })], { type: 'application/json' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'data.secure.json'; a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+  msg.textContent = 'Şifreli dosya indirildi. Bunu GitHub’a yüklemeden önce ham data içeren eski dosyayı kaldıracağız.';
+}
+$('#secureExport').onclick = () => exportSecureData().catch(() => { $('#secureMsg').textContent = 'Şifreli dosya oluşturulamadı.'; });
 const drop = $('#drop'), fileInput = $('#file');
 drop.onclick = () => fileInput.click();
 fileInput.onchange = e => { if (e.target.files[0]) importFile(e.target.files[0]); };
@@ -1376,6 +1436,18 @@ $('#priv').onclick = () => {
 ['pre', 'post'].forEach(id => $('#' + id).oninput = () => duty(CUR));
 $('#rst').onclick = () => { $('#pre').value = 75; $('#post').value = 30; duty(CUR); };
 
+function validateData(data) {
+  const issues = [];
+  if (!data || !Array.isArray(data.legs)) return ['Uçuş listesi bulunamadı.'];
+  data.legs.forEach((l, i) => {
+    if (!l || !l.o || !l.d || !l.dep || !l.arr) issues.push(`uçuş ${i + 1}: zorunlu alan eksik`);
+    else if (!Number.isFinite(Date.parse(l.dep + 'Z')) || !Number.isFinite(Date.parse(l.arr + 'Z')))
+      issues.push(`uçuş ${i + 1}: tarih okunamadı`);
+    else if (Date.parse(l.arr + 'Z') < Date.parse(l.dep + 'Z')) issues.push(`uçuş ${i + 1}: iniş kalkıştan önce`);
+  });
+  return issues;
+}
+
 async function start() {
   let src = '';
   try {
@@ -1388,7 +1460,10 @@ async function start() {
       }
     }
   } catch (e) { }
+  const dataIssues = validateData(D);
+  if (dataIssues.length) console.warn('MaziTK veri kontrolü:', dataIssues);
   $('#fnote').textContent = (src || 'Veri sayfanın içine gömülü. Yanına data.json koyarsan onu okur.') +
+    (dataIssues.length ? ` Veri kontrolü: ${dataIssues.length} sorun bulundu; ayrıntılar tarayıcı konsolunda.` : '') +
     ' Veri tarayıcıdan dışarı çıkmaz; sayfa sunucu gerektirmez.';
   boot();
   YEARS = [...new Set(D.legs.map(l => l.dep.slice(0, 4)))].sort();
